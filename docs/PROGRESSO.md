@@ -122,3 +122,124 @@ id_pedido id_item       data produto   categoria  quantidade  preco_unitario
 
 Veja no [README](../README.md) as instruções de uso e as explicações de ambiente
 virtual, módulo, pacote, instalação editável e DataFrame.
+
+## Etapa 2 — Validação e qualidade dos dados — 11/11/2026
+
+### Entregas
+
+- [x] Ler o README e este histórico e procurar instruções `AGENTS.md` na pasta
+  e nos ancestrais; nenhuma instrução adicional foi encontrada.
+- [x] Preservar o comando `inspecionar` e os sete testes originais da etapa 1.
+- [x] Reutilizar `carregar_vendas`, agora em `leitura.py`, com a opção
+  `como_texto=True` para a validação. O modo padrão mantém a inferência usada
+  pela inspeção; o import antigo por `salesflow.cli` continua funcionando.
+- [x] Implementar `validar --arquivo ... --saida ...`.
+- [x] Separar as regras em `validacao.py`, sem acesso a arquivos ou ao terminal.
+- [x] Validar as sete colunas, preenchimento, datas reais, quantidade inteira
+  positiva e preço positivo com formato decimal controlado.
+- [x] Converter preços diretamente do texto para centavos inteiros exatos.
+- [x] Classificar duplicidades por `(id_pedido, id_item)` após validar os campos.
+- [x] Manter inválidos, duplicados ignorados e conflitantes em categorias exclusivas,
+  com todos os motivos de um registro inválido reunidos numa ocorrência.
+- [x] Separar a escrita em `relatorios.py`: `validos.csv`, `rejeitados.csv`
+  e `resumo.json`, criando a pasta de saída automaticamente.
+- [x] Incluir arquivo e posição de origem, classificação e motivo nos rejeitados.
+- [x] Adicionar `data/exemplo_com_erros.csv` com casos controlados.
+- [x] Documentar as regras em [REGRAS.md](REGRAS.md) e atualizar o README.
+- [x] Acrescentar testes unitários e de integração e executá-los.
+- [x] Conferir que os quatro registros originais continuam válidos.
+- [x] Ignorar `/relatorios/` no Git, mantendo os arquivos gerados disponíveis localmente.
+
+### Organização e decisões
+
+`carregar_vendas` é a única função de leitura. No comando `validar`, todos os
+campos são preservados como texto: isso permite rejeitar `10.000` ou `1e2` antes
+que uma inferência numérica esconda a escrita original. Não houve mudança de
+dependências nem necessidade de reinstalar o projeto em modo editável.
+
+`converter_preco_centavos` valida o formato, separa a parte inteira da fração,
+completa a fração até duas casas e calcula `inteiros * 100 + fração`, sem `float`.
+Preços inteiros também são aceitos; quando há parte decimal, o separador deve
+ser ponto. Não são aceitos sinais, vírgulas, expoentes ou mais de duas casas.
+
+`validar_vendas` primeiro verifica o esquema e todos os campos de cada registro.
+Somente os registros com conteúdo válido são agrupados por chave. Conteúdos
+normalizados idênticos aceitam a primeira ocorrência e ignoram as demais;
+conteúdos válidos divergentes tornam todas as ocorrências válidas daquela chave
+conflitantes, inclusive repetições de um deles. Inválidos não mudam de categoria.
+Quantidades e preços são normalizados na comparação; identificadores, produtos
+e categorias mantêm seu texto. Os detalhes estão em `REGRAS.md`.
+
+`ResultadoValidacao` reúne as tabelas, as contagens e as colunas ausentes.
+`salvar_relatorios` escreve esse resultado; `main` coordena as chamadas e mostra
+um resumo no terminal. O DataFrame de entrada não é alterado pela validação.
+
+O campo `linha_origem` é a posição ordinal entre os registros CSV lidos,
+considerando o cabeçalho como 1, e não necessariamente uma linha física do arquivo.
+Ausência de coluna obrigatória torna todos os registros existentes inválidos e
+é informada no JSON, inclusive quando não há registros. CSVs de saída vazios
+mantêm seus cabeçalhos.
+
+### Comandos executados e verificações
+
+O estado inicial desta etapa estava limpo, na branch `main` acompanhando
+`origin/main`, com o commit `d7fce4c` da estrutura inicial já existente.
+O Python da `.venv` continuou sendo o 3.12.10. Nenhum commit, push ou alteração
+na configuração do Git foi realizado nesta etapa.
+
+| Comando | Resultado |
+| --- | --- |
+| `git status --short --branch` | Estado inicial limpo, `main...origin/main`. |
+| `git log -1 --oneline` | `d7fce4c Adiciona estrutura inicial do projeto SalesFlow com leitura de CSV e CLI`. |
+| `.\.venv\Scripts\python.exe --version` | Python 3.12.10. |
+| `.\.venv\Scripts\python.exe -m pytest` | 89 testes aprovados em 12,45 segundos, incluindo os sete originais e os dois novos casos de CSV com campos excedentes. |
+| `.\.venv\Scripts\python.exe -m ruff check .` | `All checks passed!` após os ajustes de imports e formatação. |
+| `.\.venv\Scripts\python.exe -m ruff format --check .` | 12 arquivos já formatados. |
+| `git diff --check` | Sem erros de whitespace; apenas avisos da configuração existente de conversão LF/CRLF. |
+| `.\.venv\Scripts\python.exe -X utf8 -m salesflow validar --arquivo data/exemplo_com_erros.csv --saida relatorios/` | Código 0, três relatórios gerados, contagem `11 = 3 + 5 + 1 + 2`. |
+| `.\.venv\Scripts\python.exe -m salesflow validar --arquivo data/exemplo_com_erros.csv --saida relatorios/` | Repetição final sem a opção UTF-8: código 0 e as mesmas contagens e relatórios. |
+| `.\.venv\Scripts\python.exe -X utf8 -m salesflow validar --arquivo data/exemplo_vendas.csv --saida relatorios/original/` | Código 0, quatro válidos e nenhuma rejeição ou ocorrência ignorada. |
+
+A opção `-X utf8` nas verificações manuais garante a captura dos acentos pelo
+terminal da ferramenta. O comando também foi executado sem essa opção,
+com o mesmo resultado, como documentado no README.
+
+Os testes cobrem preenchimento, colunas ausentes, datas impossíveis e anos
+bissextos, formatos numéricos inválidos, zeros à esquerda, centavos exatos acima
+de 64 bits, contagem exclusiva, vários erros na mesma linha, duplicatas
+idênticas, sequência conflitante `A, A, B`, inválidos na mesma chave de válidos,
+índice do DataFrame repetido, preservação da entrada e execução real do módulo.
+Também verificam relatórios vazios, origem e motivos, arquivo inexistente,
+CSV vazio ou com aspas malformadas, argumentos ausentes e falhas de saída,
+incluindo impedir que os relatórios sobrescrevam a própria entrada.
+
+A revisão final identificou que o Pandas poderia inferir um índice e descartar
+o primeiro campo de registros com campos excedentes. No modo de validação,
+`index_col=False` e a promoção de `ParserWarning` a erro impedem essa perda
+silenciosa. Foram acrescentados dois casos de regressão, com campo excedente
+no primeiro registro e em um registro posterior. A leitura é interrompida
+sem gerar relatórios nesses casos.
+
+### Relatórios conferidos
+
+| Entrada | Lidas | Válidas | Inválidas | Duplicadas ignoradas | Conflitantes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `data/exemplo_com_erros.csv` | 11 | 3 | 5 | 1 | 2 |
+| `data/exemplo_vendas.csv` | 4 | 4 | 0 | 0 | 0 |
+
+Os três arquivos do exemplo com erros estão em `relatorios/`. Os do exemplo
+original estão em `relatorios/original/`. Os CSVs e o JSON foram abertos e
+conferidos: identificadores como `01` permanecem escritos dessa forma,
+`0.29` gerou `29` centavos e o preço inválido `10.999` permaneceu no rejeitado
+com seu conteúdo original e motivo. Uma nova execução substitui os três
+relatórios da mesma pasta; o CSV de entrada é protegido contra essa substituição.
+
+### Pendências e limites atuais
+
+- Nenhuma pendência técnica identificada nas verificações desta etapa.
+- As alterações permanecem locais para revisão; commit e push não foram realizados.
+- Código de saída 0 significa que os relatórios foram gerados, mesmo contendo
+  rejeições. As contagens e `colunas_ausentes` no JSON informam a qualidade.
+- O CSV continua sendo lido integralmente em memória, em UTF-8 e separado por vírgula.
+- Não há correção automática de valores, cálculos de faturamento, interface web
+  ou integração contínua nesta etapa.

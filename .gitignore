@@ -17,6 +17,9 @@ dist/
 .coverage
 htmlcov/
 
+# Relatórios gerados pelo comando validar
+/relatorios/
+
 # Arquivos do sistema operacional
 .DS_Store
 Thumbs.db

@@ -1,0 +1,12 @@
+id_pedido,id_item,data,produto,categoria,quantidade,preco_unitario
+2001,01,2026-10-01,Mouse,Perifericos,2,50.00
+2001,02,2026-10-01,Teclado,Perifericos,1,100.00
+2001,01,2026-10-01,Mouse,Perifericos,2,50.00
+2002,01,2026-10-02,,Perifericos,1,25.00
+2003,01,2026-02-30,Monitor,Monitores,1,300.00
+2004,01,2026-10-03,Mouse,Perifericos,1.5,50.00
+2005,01,2026-10-03,Mouse,Perifericos,1,10.999
+2006,01,2026-10-04,Monitor,Monitores,1,300.00
+2006,01,2026-10-04,Monitor,Monitores,1,350.00
+2006,01,2026-10-04,Monitor,Monitores,0,300.00
+2007,01,2026-10-05,Mouse,Perifericos,1,0.29

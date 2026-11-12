@@ -1,11 +1,13 @@
 # SalesFlow
 
 Projeto de portfólio em Python para aprender a trabalhar com dados de vendas.
-Nesta primeira entrega, o SalesFlow lê um CSV e mostra suas colunas, a quantidade
-de linhas e uma prévia de até cinco linhas.
+O SalesFlow inspeciona arquivos CSV e valida a qualidade dos registros,
+identificando dados inválidos, repetições e conflitos de chave.
 
-O programa lê todo o arquivo em memória. Validações de regras de negócio,
-cálculos de vendas e relatórios ficam para próximas entregas.
+O programa lê todo o arquivo em memória. A etapa 1 oferece a inspeção e a
+etapa 2 acrescenta a validação e os relatórios de qualidade em CSV e JSON.
+Cálculos de faturamento e outros relatórios de negócio ficam para próximas
+entregas.
 
 ## Preparar o ambiente no Windows
 
@@ -88,26 +90,90 @@ Um **pacote** organiza módulos em uma pasta; neste projeto, o pacote é
 `__main__.py` desse pacote.
 
 O `__main__.py` chama a função principal em `cli.py`. Ela interpreta o
-subcomando `inspecionar` e a opção `--arquivo`. A função `carregar_vendas` usa
-`pandas.read_csv` para carregar o CSV e devolver um **DataFrame**.
+subcomando `inspecionar` ou `validar` e suas opções. A função `carregar_vendas`,
+em `leitura.py`, usa `pandas.read_csv` para carregar o CSV e devolver um
+**DataFrame**.
 
 Um DataFrame é uma tabela do Pandas, com linhas e colunas nomeadas. O programa
 consulta `df.columns` para mostrar as colunas, `len(df)` para contar as linhas e
 `df.head()` para obter as primeiras cinco. A leitura preserva os identificadores
-como texto; os tipos das demais colunas são inferidos pelo Pandas.
+como texto. No comando `inspecionar`, os tipos das demais colunas são inferidos
+pelo Pandas, preservando o comportamento da etapa 1.
+
+No comando `validar`, a mesma função de leitura recebe `como_texto=True` para
+preservar a escrita original de todos os campos. Assim, um preço escrito como
+`10.999` ou `1e2` não pode perder seu formato antes da validação.
+
+A função `validar_vendas`, em `validacao.py`, recebe o DataFrame e devolve
+tabelas e contagens sem ler arquivos, imprimir ou gravar relatórios. Primeiro
+valida os campos; depois resolve as duplicidades entre registros com conteúdo
+válido. A função `salvar_relatorios`, em `relatorios.py`, grava os resultados.
+A interface em `cli.py` coordena essas funções.
+
+## Validar a qualidade das vendas
+
+Na raiz do projeto, execute:
+
+```powershell
+.\.venv\Scripts\python.exe -m salesflow validar --arquivo data/exemplo_com_erros.csv --saida relatorios/
+```
+
+Com a `.venv` ativada, o comando equivalente é:
+
+```powershell
+python -m salesflow validar --arquivo data/exemplo_com_erros.csv --saida relatorios/
+```
+
+A pasta de saída é criada automaticamente. Nela ficam:
+
+| Arquivo | Conteúdo |
+| --- | --- |
+| `relatorios/validos.csv` | Registros aceitos, com quantidade inteira, preço padronizado e a coluna inteira `preco_unitario_centavos`. |
+| `relatorios/rejeitados.csv` | Registros inválidos, duplicados ignorados e conflitantes, com arquivo e posição de origem, classificação e motivo. |
+| `relatorios/resumo.json` | Contagens por categoria, arquivo de origem e lista de colunas obrigatórias ausentes. |
+
+O exemplo controlado tem 11 registros: 3 válidos, 5 inválidos, 1 duplicado
+ignorado e 2 conflitantes. Os quatro registros de `data/exemplo_vendas.csv`
+atendem às regras e têm chaves distintas. Você pode validar esse arquivo
+indicando outra pasta, como `--saida relatorios/original/`.
+
+Os identificadores continuam sendo texto: o item `01` não vira `1`. O preço
+usa ponto quando há parte decimal e até duas casas; sua conversão para centavos
+é feita com inteiros, sem `float`. Por exemplo, `0.29` resulta exatamente em
+`29` centavos. Preços inteiros, como `10`, também são aceitos.
+
+Cada registro entra em exatamente uma categoria:
+
+```text
+lidas = validas + invalidas + duplicadas_ignoradas + conflitantes
+```
+
+As regras completas, a prioridade entre as classificações e a definição da
+origem estão em [docs/REGRAS.md](docs/REGRAS.md).
+
+Os relatórios usam nomes fixos: repetir o comando na mesma pasta substitui os
+três arquivos gerados. O programa impede que um desses caminhos sobrescreva
+o próprio CSV de entrada. Código de saída `0` significa que os relatórios foram
+gerados, mesmo quando contêm rejeições; `1` indica erro de leitura ou gravação,
+e `2` indica argumentos incorretos.
 
 ## Arquivos do projeto
 
 | Caminho | Para que serve |
 | --- | --- |
 | `pyproject.toml` | Define o pacote, a versão de Python, as dependências e as configurações das ferramentas. |
-| `README.md` | Explica a instalação, o uso e os conceitos da primeira entrega. |
+| `README.md` | Explica a instalação, o uso e os conceitos das etapas implementadas. |
 | `.gitignore` | Evita incluir o ambiente virtual e arquivos gerados no Git. |
 | `src/salesflow/__init__.py` | Identifica a pasta como um pacote Python. |
 | `src/salesflow/__main__.py` | Permite executar o pacote com `python -m salesflow`. |
-| `src/salesflow/cli.py` | Interpreta os argumentos, lê o CSV e apresenta a inspeção. |
-| `tests/test_cli.py` | Verifica o comportamento da leitura e do comando. |
+| `src/salesflow/cli.py` | Interpreta os argumentos e coordena os comandos de inspeção e validação. |
+| `src/salesflow/leitura.py` | Compartilha a leitura do CSV entre os dois comandos. |
+| `src/salesflow/validacao.py` | Valida os campos, converte preços e classifica duplicidades. |
+| `src/salesflow/relatorios.py` | Grava os CSVs e o resumo JSON da validação. |
+| `tests/` | Verifica leitura, regras, duplicidades, relatórios e execução pelo terminal. |
 | `data/exemplo_vendas.csv` | Contém os quatro itens de venda fornecidos para esta entrega. |
+| `data/exemplo_com_erros.csv` | Reúne casos controlados de erros, repetição e conflito. |
+| `docs/REGRAS.md` | Define os formatos aceitos, as classificações e os relatórios. |
 | `docs/PROGRESSO.md` | Registra entregas, comandos executados, resultados e pendências. |
 
 ## Verificar o projeto
