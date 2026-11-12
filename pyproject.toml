@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "salesflow"
+version = "0.1.0"
+description = "Projeto de portfólio para explorar dados de vendas com Python."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["pandas>=2.2,<4"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[project.urls]
+Repository = "https://github.com/felipe0-stack/salesflow"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
